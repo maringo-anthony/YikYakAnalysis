@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Image and videos
+*.mp4
+*.jpg
+
 # C extensions
 *.so
 
