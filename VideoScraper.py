@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 import glob
 import re
+from difflib import SequenceMatcher
 
 
 def frameScreenshots(video_file_name):
@@ -77,8 +78,32 @@ def parseTextToYaks(yakText):
     return ret
 
 
+def removeLikelyMistakes(yaks):
+    """
+    Remove likely duplicate yaks from the set due to error in OCR
+    :param yaks: Set of yak strings
+    :return: Set of yak strings with likely duplicates removed
+    """
+
+    list_yaks = list(yaks)
+    yaks_to_remove = set()
+
+    # Find yaks with high similarity to others in the set
+    for i in range(len(list_yaks)):
+        for j in range(i + 1, len(list_yaks)):
+            if SequenceMatcher(None, list_yaks[i], list_yaks[j]).ratio() >= .8:
+                yaks_to_remove.add(list_yaks[j])
+
+    # Remove them from the set
+    for yak in yaks_to_remove:
+        yaks.remove(yak)
+
+    return yaks
+
+
 VIDEO_FILE_NAME = "RPReplay_Final1636681059.MP4"
 
 frameScreenshots(VIDEO_FILE_NAME)
 yaks = screenshotsToText()
-writeYaksToFile(yaks)
+refined_yaks = removeLikelyMistakes(yaks)
+writeYaksToFile(refined_yaks)
