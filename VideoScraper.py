@@ -1,14 +1,14 @@
 # Anthony Maringo Alm4cu
+import glob
+import os
+import re
+from datetime import datetime
+from difflib import SequenceMatcher
+from multiprocessing import Pool
+
 import cv2  # for capturing videos
 import pytesseract
-import os
-from datetime import datetime
-import glob
-import re
-from difflib import SequenceMatcher
 from tqdm import tqdm
-from tqdm.contrib.concurrent import process_map
-from multiprocessing import Pool
 
 
 def frameScreenshots(video_file_name):
@@ -34,7 +34,7 @@ def screenshotsToText():
     Parse all *.jpgs in the current directory for yaks
     :return: Set of all unique yaks found from screenshots
     """
-    print("Proccessing screenshots into text...")
+    print("Processing screenshots into text...")
 
     screenshots = glob.glob("*.jpg")
 
@@ -121,14 +121,14 @@ def removeLikelyMistakes(yaks):
                 break
 
     # Remove them from the set
-    for yak in yaks_to_remove:
-        yaks.remove(yak)
+    yaks = yaks - yaks_to_remove
 
     return yaks
 
 
 VIDEO_FILE_NAME = "short_test_video.mp4"
 
+# Leave all the runner code in this so multiprocessing works nicely
 if __name__ == '__main__':
     frameScreenshots(VIDEO_FILE_NAME)
     yaks = screenshotsToText()
