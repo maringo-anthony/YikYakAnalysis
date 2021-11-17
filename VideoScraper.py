@@ -1,11 +1,13 @@
 # Anthony Maringo Alm4cu
+import glob
+import os
+import re
+from datetime import datetime
+from difflib import SequenceMatcher
+from multiprocessing import Pool
+
 import cv2  # for capturing videos
 import pytesseract
-import os
-from datetime import datetime
-import glob
-import re
-from difflib import SequenceMatcher
 from tqdm import tqdm
 
 
@@ -32,15 +34,32 @@ def screenshotsToText():
     Parse all *.jpgs in the current directory for yaks
     :return: Set of all unique yaks found from screenshots
     """
-    yaks = set()
-    print("Proccessing screenshots into text...")
-    for screenshot in tqdm(glob.glob("*.jpg")):
-        image_text = pytesseract.image_to_string(screenshot)
-        parsed_yaks = parseTextToYaks(image_text)
-        yaks.update(parsed_yaks)
+    print("Processing screenshots into text...")
+
+    screenshots = glob.glob("*.jpg")
+
+    with Pool() as pool:
+        unique_yaks = list(tqdm(pool.imap(screenshotsToTextProcessor, screenshots), total=len(screenshots)))
+
+    # We get back a list of sets and need to union them together
+    unique_yaks = set().union(*unique_yaks)
+
+    # Clean up the directory
+    for screenshot in screenshots:
         os.remove(screenshot)
 
-    return yaks
+    return unique_yaks
+
+
+def screenshotsToTextProcessor(screenshot):
+    """
+    Worker function to actually do the processing of a screenshot
+    :param screenshot: filename.jpg
+    :return: set of yak strings
+    """
+    image_text = pytesseract.image_to_string(screenshot)
+    parsed_yaks = parseTextToYaks(image_text)
+    return parsed_yaks
 
 
 def writeYaksToFile(yaks):
@@ -84,28 +103,34 @@ def removeLikelyMistakes(yaks):
     :return: Set of yak strings with likely duplicates removed
     """
 
-    list_yaks = list(yaks)
+    list_yaks = sorted(list(yaks))
     yaks_to_remove = set()
 
     # TODO: Get a better algorithm n^2 is too slow
     print("\nRemoving likely mistakes...")
+
     # Find yaks with high similarity to others in the set
     for i in tqdm(range(len(list_yaks))):
         for j in range(i + 1, len(list_yaks)):
-            if SequenceMatcher(None, list_yaks[i], list_yaks[j]).ratio() >= .8:
+            match_percentage = SequenceMatcher(None, list_yaks[i], list_yaks[j]).ratio()
+
+            # Since the yaks are sorted, we can stop iterating through if we have a low percentage match
+            if match_percentage >= .8:
                 yaks_to_remove.add(list_yaks[j])
+            else:
+                break
 
     # Remove them from the set
-    for yak in yaks_to_remove:
-        yaks.remove(yak)
+    yaks = yaks - yaks_to_remove
 
     return yaks
 
 
-VIDEO_FILE_NAME = "11_12_Last_24_HR_Yaks.MP4"
+VIDEO_FILE_NAME = "short_test_video.mp4"
 
-start = datetime.now()
-frameScreenshots(VIDEO_FILE_NAME)
-yaks = screenshotsToText()
-refined_yaks = removeLikelyMistakes(yaks)
-writeYaksToFile(refined_yaks)
+# Leave all the runner code in this so multiprocessing works nicely
+if __name__ == '__main__':
+    frameScreenshots(VIDEO_FILE_NAME)
+    yaks = screenshotsToText()
+    refined_yaks = removeLikelyMistakes(yaks)
+    writeYaksToFile(refined_yaks)
