@@ -6,6 +6,7 @@ from datetime import datetime
 import glob
 import re
 from difflib import SequenceMatcher
+from tqdm import tqdm
 
 
 def frameScreenshots(video_file_name):
@@ -32,10 +33,8 @@ def screenshotsToText():
     :return: Set of all unique yaks found from screenshots
     """
     yaks = set()
-
-    for screenshot in glob.glob("*.jpg"):
-        print("processing", screenshot, "...")
-
+    print("Proccessing screenshots into text...")
+    for screenshot in tqdm(glob.glob("*.jpg")):
         image_text = pytesseract.image_to_string(screenshot)
         parsed_yaks = parseTextToYaks(image_text)
         yaks.update(parsed_yaks)
@@ -88,8 +87,10 @@ def removeLikelyMistakes(yaks):
     list_yaks = list(yaks)
     yaks_to_remove = set()
 
+    # TODO: Get a better algorithm n^2 is too slow
+    print("\nRemoving likely mistakes...")
     # Find yaks with high similarity to others in the set
-    for i in range(len(list_yaks)):
+    for i in tqdm(range(len(list_yaks))):
         for j in range(i + 1, len(list_yaks)):
             if SequenceMatcher(None, list_yaks[i], list_yaks[j]).ratio() >= .8:
                 yaks_to_remove.add(list_yaks[j])
@@ -101,8 +102,9 @@ def removeLikelyMistakes(yaks):
     return yaks
 
 
-VIDEO_FILE_NAME = "RPReplay_Final1636681059.MP4"
+VIDEO_FILE_NAME = "11_12_Last_24_HR_Yaks.MP4"
 
+start = datetime.now()
 frameScreenshots(VIDEO_FILE_NAME)
 yaks = screenshotsToText()
 refined_yaks = removeLikelyMistakes(yaks)
