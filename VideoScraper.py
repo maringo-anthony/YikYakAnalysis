@@ -10,6 +10,7 @@ import cv2  # for capturing videos
 import pytesseract
 from tqdm import tqdm
 
+# TODO: Nice features to have, move video files into a folder, move images into a folder, and have output text folder
 
 def frameScreenshots(video_file_name):
     """
